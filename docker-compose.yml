@@ -1,0 +1,80 @@
+version: '3.4'
+
+volumes:
+  keycloak-datastore:
+  etcd_data:
+    driver: local
+
+services:
+  keycloak-db:
+    image: postgres
+    restart: always
+    volumes: 
+      - keycloak-datastore:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB:       keycloak
+      POSTGRES_USER:     keycloak
+      POSTGRES_PASSWORD: password
+
+  keycloak:
+    image: quay.io/keycloak/keycloak
+    restart: always
+    depends_on:
+      - keycloak-db
+    command: start-dev
+    ports:
+      - "8080:8080"
+    environment:
+      DB_VENDOR:   POSTGRES
+      DB_ADDR:     keycloak-db
+      DB_PORT:     5432
+      DB_DATABASE: keycloak
+      DB_USER:     keycloak
+      DB_PASSWORD: password
+      KEYCLOAK_ADMIN:     admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+
+  apisix:
+    image: apache/apisix:latest
+    restart: always
+    volumes:
+      - ./apisix_log:/usr/local/apisix/logs
+      - ./apisix_conf/config.yaml:/usr/local/apisix/conf/config.yaml:ro
+    depends_on:
+      - etcd
+    ports:
+      - "9180:9180/tcp"
+      - "9080:9080/tcp"
+      - "9091:9091/tcp"
+      - "9443:9443/tcp"
+      - "9092:9092/tcp"
+
+  etcd:
+    image: bitnami/etcd:3.4.15
+    restart: always
+    volumes:
+      - etcd_data:/bitnami/etcd
+    environment:
+      ETCD_ENABLE_V2: "true"
+      ALLOW_NONE_AUTHENTICATION: "yes"
+      ETCD_ADVERTISE_CLIENT_URLS: "http://0.0.0.0:2379"
+      ETCD_LISTEN_CLIENT_URLS: "http://0.0.0.0:2379"
+    ports:
+      - "2379:2379/tcp"
+
+  frontend:
+    image: ramama/web-demo:1.0.0
+    restart: always
+    volumes:
+      - ./frontend/.env:/app/.env
+    ports:
+      - "80:3000"
+
+  backend:
+    image: trafex/php-nginx:2.6.0
+    restart: always
+    volumes:
+      - ./backend/web:/var/www/html
+      - ./backend/cors.conf:/etc/nginx/conf.d/cors.conf
+    ports:
+      - "10000:8080"
