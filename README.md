@@ -12,6 +12,10 @@ docker compose สำหรับทดสอบระบบเบื้อง�
 | `frontend`    | frontend ที่เขียนด้วย nextjs             |
 
 ## วิธีติดตั้ง
+0. clone project and cd to the folder
+    ```bash
+    $ git clone https://github.com/V-Redicalz/rama-demo.git && cd rama-demo
+    ```
 1. deploy app ด้วยคำสั่ง
     ```bash
     $ docker compose up -d
